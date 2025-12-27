@@ -1,0 +1,40 @@
+# --- Python ---
+# Ignora pastas de cache de compilação (detectado na auditoria)
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+
+# --- Ambientes Virtuais ---
+# Ignora dependências locais e ambientes de desenvolvimento
+.venv/
+venv/
+env/
+ENV/
+bin/
+lib/
+include/
+
+# --- Streamlit ---
+# Ignora configurações locais e arquivos temporários do Streamlit
+.streamlit/config.toml
+.streamlit/secrets.toml
+
+# --- Distribuição / Pacotes ---
+dist/
+build/
+*.egg-info/
+
+# --- Sistema Operacional ---
+# Arquivos de sistema que não devem subir para o repositório
+.DS_Store
+Thumbs.db
+ehthumbs.db
+Desktop.ini
+
+# --- IDEs ---
+# Configurações específicas de editores (VS Code, PyCharm)
+.vscode/
+.idea/
+*.swp
+*.swo
