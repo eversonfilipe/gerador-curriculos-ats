@@ -64,6 +64,13 @@ To run the project locally, follow the steps below:
    ```bash
    streamlit run app.py
    ```
+---
+
+# Media:
+<img width="700" height="767" src="https://github.com/user-attachments/assets/c2638310-f830-4ce0-8bea-6de8c7180fe4" alt="Imagem ilustrativa de um print da tela inicial da aplicação. Nesse anexo, mostra-se a tela inicial, com as configurações CRUD de gerenciamento de currículo na esquerda do paínel, e centralizado seções a preencher, com sindronização á pré-visualização do currículo no lado direito. Possibilitando feedback e acompanhamento em tempo real."/>
+<img width="700" height="767" alt="A three-column web application interface for a Cover Letter Builder with a dark theme sidebar on the left showing language and layout settings, a central section with form fields for recipient and opening details, and a document preview on the right displaying a resume header and a code block with raw HTML tags at the bottom." src="https://github.com/user-attachments/assets/eeb95ea2-530b-4a4a-8f4c-1f37f90867d0" />
+<img width="700" height="767" alt="A web application interface for a Proposal Builder following PMI and ABNT standards featuring a dark sidebar on the left with language and layout settings and a main form section with input fields for author, institution, project title, subtitle, city, year, and work theme." src="https://github.com/user-attachments/assets/f4f0b285-79a8-454d-b53e-222ceab33191" />
+<img width="700" height="767" alt="A web application interface for a Report Builder following ABNT standards featuring a dark sidebar on the left with language and layout settings and a main form section with input fields for author, institution, report title, subtitle, city, year, and work theme." src="https://github.com/user-attachments/assets/c88a5e25-4a4e-4c03-8e89-a14699c27ac2" />
 
 ---
 <div align="center">
