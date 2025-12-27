@@ -1,0 +1,9 @@
+# --- Framework Web ---
+streamlit
+
+# --- Geração de Documentos ---
+reportlab
+python-docx
+
+# --- Manipulação de PDFs (Leitura/ATS) ---
+pypdf
