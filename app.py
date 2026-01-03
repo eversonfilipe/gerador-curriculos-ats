@@ -1,4 +1,5 @@
 import streamlit as st
+from streamlit_sortables import sort_items
 from reportlab.lib.pagesizes import letter
 from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Flowable, Table, TableStyle, PageBreak, Image
 from reportlab.lib.units import cm
@@ -93,6 +94,8 @@ TRANSLATIONS = {
         'experience_header': "EXPERIÊNCIA PROFISSIONAL",
         'education_header': "EDUCAÇÃO",
         'certifications_header': "CERTIFICAÇÕES E CURSOS",
+        'certifications_header': "CERTIFICAÇÕES E CURSOS",
+        'projects_header': "PROJETOS",
         'languages_header': "IDIOMAS",
         'awards_header': "RECONHECIMENTO E PRÊMIOS",
         'volunteering_header': "VOLUNTARIADO",
@@ -150,7 +153,12 @@ TRANSLATIONS = {
         'lbl_vol_role': "Papel/Função",
         'lbl_vol_org': "Organização",
         'lbl_vol_cat': "Categoria (ex: Social)",
+        'lbl_vol_cat': "Categoria (ex: Social)",
         'connector_offered_by': "Oferecido por",
+        # Projects Labels
+        'lbl_project_title': "Título do Projeto",
+        'lbl_project_link': "Link (Github/Demo)",
+        'lbl_project_desc': "Descrição",
         'btn_add': "Adicionar",
         'btn_update': "Atualizar",
         'btn_save': "Salvar",
@@ -242,6 +250,8 @@ TRANSLATIONS = {
         'experience_header': "WORK EXPERIENCE",
         'education_header': "EDUCATION",
         'certifications_header': "CERTIFICATIONS",
+        'certifications_header': "CERTIFICATIONS",
+        'projects_header': "PROJECTS",
         'languages_header': "LANGUAGES",
         'awards_header': "AWARDS & RECOGNITION",
         'volunteering_header': "VOLUNTEERING",
@@ -300,6 +310,10 @@ TRANSLATIONS = {
         'lbl_vol_org': "Organization",
         'lbl_vol_cat': "Category (e.g., Social)",
         'connector_offered_by': "Offered by",
+        # Projects Labels
+        'lbl_project_title': "Project Title",
+        'lbl_project_link': "Link (Github/Demo)",
+        'lbl_project_desc': "Description",
         'btn_add': "Add",
         'btn_update': "Update",
         'btn_save': "Save",
@@ -336,9 +350,12 @@ if 'resume_data' not in st.session_state:
         "experience": [],
         "education": [],
         "certifications": [],
+        "certifications": [],
+        "projects": [],
         "languages": [],
         "awards": [],
         "volunteering": [],
+        "section_order": ["summary", "skills", "experience", "education", "certifications", "projects", "languages", "awards", "volunteering"],
         "updated_at": date.today()
     }
 
@@ -408,7 +425,13 @@ def add_award(title, issuer, date_str):
 def remove_award(index): st.session_state['resume_data']['awards'].pop(index)
 def add_volunteering(role, org, start, end, category):
     st.session_state['resume_data']['volunteering'].append({"role": role, "org": org, "start": start, "end": end, "category": category})
+def add_volunteering(role, org, start, end, category):
+    st.session_state['resume_data']['volunteering'].append({"role": role, "org": org, "start": start, "end": end, "category": category})
 def remove_volunteering(index): st.session_state['resume_data']['volunteering'].pop(index)
+
+def add_project(title, link, description):
+    st.session_state['resume_data']['projects'].append({"title": title, "link": link, "description": description})
+def remove_project(index): st.session_state['resume_data']['projects'].pop(index)
 
 # Proposal Helpers
 def add_text_subsection(sec_id, title, content):
@@ -558,65 +581,79 @@ def generate_pdf(data, scale_factor, lang_code):
         # story.append(HorizontalLine(content_width, color=colors.black, thickness=0.5))
         # Spacer removed for Modern/Minimalist look
 
-    if data['summary']:
-        add_section_title(t['summary_header'])
-        for line in data['summary'].split('\n'):
-            if line.strip(): story.append(Paragraph(line, style_normal))
-        
-        # Subseção 'Feitos' (Achievements) dentro do Summary
-        achievements = data.get('achievements', '')
-        if achievements:
-            ach_label = "FEITOS" if lang_code == 'pt' else "KEY ACHIEVEMENTS"
-            story.append(Spacer(1, scaled(4)))
-            story.append(Paragraph(f"<b>{ach_label}</b>", style_normal))
-            for line in achievements.split('\n'):
-                if line.strip(): story.append(Paragraph(line, style_normal))
-
-    if data['skills']:
-        add_section_title(t['skills_header'])
-        story.append(Paragraph(", ".join(data['skills']), style_normal))
-    if data['experience']:
-        add_section_title(t['experience_header'])
-        for exp in data['experience']:
-            story.append(Paragraph(f"{exp['position']} | {exp['company']}", style_item_header))
-            story.append(Paragraph(f"{exp['start']} - {exp['end']}", style_item_sub))
-            if exp['description']:
-                for line in exp['description'].split('\n'):
-                    if line.strip(): story.append(Paragraph(line, style_normal))
-            story.append(Spacer(1, scaled(6)))
-    if data['education']:
-        add_section_title(t['education_header'])
-        for edu in data['education']:
-            story.append(Paragraph(f"{edu['degree']}", style_item_header))
-            story.append(Paragraph(f"{edu['institution']} • {t['lbl_year']}: {edu['year']}", style_item_sub))
-            story.append(Spacer(1, scaled(4)))
-    if data['certifications']:
-        add_section_title(t['certifications_header'])
-        for cert in data['certifications']:
-            story.append(Paragraph(f"• <b>{cert['name']}</b> ({cert['issuer']}, {cert['year']})", style_normal))
+    # Section Rendering with Dynamic Order
+    section_order = data.get('section_order', ["summary", "skills", "experience", "education", "certifications", "projects", "languages", "awards", "volunteering"])
     
-    # LANGUAGES SECTION
-    if data.get('languages'):
-        add_section_title(t['languages_header'])
-        for lang in data['languages']:
-            lang_text = f"• <b>{lang['name']}</b> - {t['lbl_conv']}: {lang['conv']} | {t['lbl_comp']}: {lang['comp']} | {t['lbl_writ']}: {lang['writ']}"
-            story.append(Paragraph(lang_text, style_normal))
+    for section in section_order:
+        if section == 'summary' and data.get('summary'):
+            add_section_title(t['summary_header'])
+            for line in data['summary'].split('\n'):
+                if line.strip(): story.append(Paragraph(line, style_normal))
+            
+            # Subseção 'Feitos' (Achievements) dentro do Summary
+            achievements = data.get('achievements', '')
+            if achievements:
+                ach_label = "FEITOS" if lang_code == 'pt' else "KEY ACHIEVEMENTS"
+                story.append(Spacer(1, scaled(4)))
+                story.append(Paragraph(f"<b>{ach_label}</b>", style_normal))
+                for line in achievements.split('\n'):
+                    if line.strip(): story.append(Paragraph(line, style_normal))
 
-    # AWARDS SECTION
-    if data.get('awards'):
-        add_section_title(t['awards_header'])
-        for aw in data['awards']:
-            # Format: Nome | Oferecido por Órgão | Data
-            aw_text = f"• {aw['title']} | {t['connector_offered_by']} {aw['issuer']} | {aw['date']}"
-            story.append(Paragraph(aw_text, style_normal))
+        elif section == 'skills' and data.get('skills'):
+            add_section_title(t['skills_header'])
+            story.append(Paragraph(", ".join(data['skills']), style_normal))
 
-    # VOLUNTEERING SECTION
-    if data.get('volunteering'):
-        add_section_title(t['volunteering_header'])
-        for vol in data['volunteering']:
-            # Format: Nome | Org | Início -> Fim | Categoria
-            vol_text = f"• <b>{vol['role']}</b> | {vol['org']} | {vol['start']} -> {vol['end']} | {vol['category']}"
-            story.append(Paragraph(vol_text, style_normal))
+        elif section == 'experience' and data.get('experience'):
+            add_section_title(t['experience_header'])
+            for exp in data['experience']:
+                story.append(Paragraph(f"{exp['position']} | {exp['company']}", style_item_header))
+                story.append(Paragraph(f"{exp['start']} - {exp['end']}", style_item_sub))
+                if exp['description']:
+                    for line in exp['description'].split('\n'):
+                        if line.strip(): story.append(Paragraph(line, style_normal))
+                story.append(Spacer(1, scaled(6)))
+
+        elif section == 'education' and data.get('education'):
+            add_section_title(t['education_header'])
+            for edu in data['education']:
+                story.append(Paragraph(f"{edu['degree']}", style_item_header))
+                story.append(Paragraph(f"{edu['institution']} • {t['lbl_year']}: {edu['year']}", style_item_sub))
+                story.append(Spacer(1, scaled(4)))
+
+        elif section == 'certifications' and data.get('certifications'):
+            add_section_title(t['certifications_header'])
+            for cert in data['certifications']:
+                story.append(Paragraph(f"• <b>{cert['name']}</b> ({cert['issuer']}, {cert['year']})", style_normal))
+
+        elif section == 'projects' and data.get('projects'):
+            add_section_title(t['projects_header'])
+            for proj in data['projects']:
+                # Format: Title | Link
+                title_text = f"• <b>{proj['title']}</b>"
+                if proj.get('link'): title_text += f" | <u>{proj['link']}</u>"
+                story.append(Paragraph(title_text, style_normal))
+                if proj.get('description'):
+                    for line in proj['description'].split('\n'):
+                         if line.strip(): story.append(Paragraph(line, style_normal))
+                story.append(Spacer(1, scaled(3)))
+
+        elif section == 'languages' and data.get('languages'):
+            add_section_title(t['languages_header'])
+            for lang in data['languages']:
+                lang_text = f"• <b>{lang['name']}</b> - {t['lbl_conv']}: {lang['conv']} | {t['lbl_comp']}: {lang['comp']} | {t['lbl_writ']}: {lang['writ']}"
+                story.append(Paragraph(lang_text, style_normal))
+
+        elif section == 'awards' and data.get('awards'):
+            add_section_title(t['awards_header'])
+            for aw in data['awards']:
+                aw_text = f"• {aw['title']} | {t['connector_offered_by']} {aw['issuer']} | {aw['date']}"
+                story.append(Paragraph(aw_text, style_normal))
+
+        elif section == 'volunteering' and data.get('volunteering'):
+            add_section_title(t['volunteering_header'])
+            for vol in data['volunteering']:
+                vol_text = f"• <b>{vol['role']}</b> | {vol['org']} | {vol['start']} -> {vol['end']} | {vol['category']}"
+                story.append(Paragraph(vol_text, style_normal))
 
     doc.build(story)
     return buffer.getvalue()
@@ -694,116 +731,137 @@ def generate_docx(data, scale_factor, lang_code):
     contact_line = " • ".join([p for p in contact_parts if p])
     add_para(contact_line, size=10, align='CENTER', space_after=12)
 
-    # 4. Summary
-    if data['summary']:
-        add_section_header(t['summary_header'])
-        for line in data['summary'].split('\n'):
-            if line.strip(): add_para(line, space_before=2)
-        
-        if data.get('achievements'):
-             ach_label = "FEITOS" if lang_code == 'pt' else "KEY ACHIEVEMENTS"
-             p = doc.add_paragraph()
-             p.paragraph_format.space_before = Pt(scaled(6))
-             p.paragraph_format.space_after = Pt(0)
-             run = p.add_run(ach_label)
-             run.bold = True
-             run.font.name = 'Times New Roman'
-             run.font.size = Pt(scaled(10.5))
-             
-             for line in data.get('achievements').split('\n'):
-                 if line.strip(): add_para(line, space_before=2)
+    # Section Rendering with Dynamic Order
+    section_order = data.get('section_order', ["summary", "skills", "experience", "education", "certifications", "projects", "languages", "awards", "volunteering"])
 
-    # 5. Skills
-    if data['skills']:
-        add_section_header(t['skills_header'])
-        add_para(", ".join(data['skills']), space_before=2)
-
-    # 6. Experience
-    if data['experience']:
-        add_section_header(t['experience_header'])
-        for exp in data['experience']:
-            # Posição | Empresa (Bold)
-            p = doc.add_paragraph()
-            p.paragraph_format.space_before = Pt(scaled(6))
-            p.paragraph_format.space_after = Pt(0)
-            run = p.add_run(f"{exp['position']} | {exp['company']}")
-            run.bold = True
-            run.font.name = 'Times New Roman'
-            run.font.size = Pt(scaled(11.5))
+    for section in section_order:
+        if section == 'summary' and data['summary']:
+            add_section_header(t['summary_header'])
+            for line in data['summary'].split('\n'):
+                if line.strip(): add_para(line, space_before=2)
             
-            # Data (Italic)
-            p_sub = doc.add_paragraph()
-            p_sub.paragraph_format.space_after = Pt(scaled(2))
-            run_sub = p_sub.add_run(f"{exp['start']} - {exp['end']}")
-            run_sub.italic = True
-            run_sub.font.name = 'Times New Roman'
-            run_sub.font.size = Pt(scaled(10.5))
+            if data.get('achievements'):
+                 ach_label = "FEITOS" if lang_code == 'pt' else "KEY ACHIEVEMENTS"
+                 p = doc.add_paragraph()
+                 p.paragraph_format.space_before = Pt(scaled(6))
+                 p.paragraph_format.space_after = Pt(0)
+                 run = p.add_run(ach_label)
+                 run.bold = True
+                 run.font.name = 'Times New Roman'
+                 run.font.size = Pt(scaled(10.5))
+                 
+                 for line in data.get('achievements').split('\n'):
+                     if line.strip(): add_para(line, space_before=2)
 
-            # Descrição
-            if exp['description']:
-                for line in exp['description'].split('\n'):
-                    if line.strip():
-                        add_para(line)
+        elif section == 'skills' and data['skills']:
+            add_section_header(t['skills_header'])
+            add_para(", ".join(data['skills']), space_before=2)
 
-    # 7. Education
-    if data['education']:
-        add_section_header(t['education_header'])
-        for edu in data['education']:
-            # Grau (Bold)
-            add_para(edu['degree'], bold=True, size=11.5, space_before=6)
-            # Inst - Ano (Italic)
-            p = doc.add_paragraph()
-            p.paragraph_format.space_after = Pt(scaled(2))
-            run = p.add_run(f"{edu['institution']} • {t['lbl_year']}: {edu['year']}")
-            run.italic = True
-            run.font.name = 'Times New Roman'
-            run.font.size = Pt(scaled(10.5))
+        elif section == 'experience' and data['experience']:
+            add_section_header(t['experience_header'])
+            for exp in data['experience']:
+                # Posição | Empresa (Bold)
+                p = doc.add_paragraph()
+                p.paragraph_format.space_before = Pt(scaled(6))
+                p.paragraph_format.space_after = Pt(0)
+                run = p.add_run(f"{exp['position']} | {exp['company']}")
+                run.bold = True
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(scaled(11.5))
+                
+                # Data (Italic)
+                p_sub = doc.add_paragraph()
+                p_sub.paragraph_format.space_after = Pt(scaled(2))
+                run_sub = p_sub.add_run(f"{exp['start']} - {exp['end']}")
+                run_sub.italic = True
+                run_sub.font.name = 'Times New Roman'
+                run_sub.font.size = Pt(scaled(10.5))
 
-    # 8. Certifications
-    if data['certifications']:
-        add_section_header(t['certifications_header'])
-        for cert in data['certifications']:
-            p = doc.add_paragraph()
-            p.paragraph_format.space_after = Pt(0)
-            p.paragraph_format.left_indent = Cm(0.5)
-            
-            run_bullet = p.add_run("• ")
-            run_name = p.add_run(cert['name'])
-            run_name.bold = True
-            run_details = p.add_run(f" ({cert['issuer']}, {cert['year']})")
-            
-            for r in [run_bullet, run_name, run_details]: 
-                r.font.name = 'Times New Roman'
-                r.font.size = Pt(scaled(10.5))
+                # Descrição
+                if exp['description']:
+                    for line in exp['description'].split('\n'):
+                        if line.strip():
+                            add_para(line)
 
-    # 9. Languages
-    if data.get('languages'):
-        add_section_header(t['languages_header'])
-        for lang in data['languages']:
-            p = doc.add_paragraph()
-            p.paragraph_format.space_after = Pt(0)
-            run = p.add_run(f"• {lang['name']}")
-            run.bold = True
-            run2 = p.add_run(f" - {t['lbl_conv']}: {lang['conv']} | {t['lbl_comp']}: {lang['comp']} | {t['lbl_writ']}: {lang['writ']}")
-            for r in [run, run2]: 
-                r.font.name = 'Times New Roman'
-                r.font.size = Pt(scaled(10.5))
+        elif section == 'education' and data['education']:
+            add_section_header(t['education_header'])
+            for edu in data['education']:
+                # Grau (Bold)
+                add_para(edu['degree'], bold=True, size=11.5, space_before=6)
+                # Inst - Ano (Italic)
+                p = doc.add_paragraph()
+                p.paragraph_format.space_after = Pt(scaled(2))
+                run = p.add_run(f"{edu['institution']} • {t['lbl_year']}: {edu['year']}")
+                run.italic = True
+                run.font.name = 'Times New Roman'
+                run.font.size = Pt(scaled(10.5))
 
-    # 10. Awards & Volunteering (Simplificado)
-    if data.get('awards'):
-        add_section_header(t['awards_header'])
-        for aw in data['awards']:
-            add_para(f"• {aw['title']} | {aw['issuer']} | {aw['date']}")
-            
-    if data.get('volunteering'):
-        add_section_header(t['volunteering_header'])
-        for vol in data['volunteering']:
-            p = doc.add_paragraph()
-            p.paragraph_format.space_after = Pt(0)
-            run = p.add_run(f"• {vol['role']}")
-            run.bold = True
-            run2 = p.add_run(f" | {vol['org']} | {vol['category']}")
-            for r in [run, run2]: r.font.name = 'Times New Roman'
+        elif section == 'certifications' and data['certifications']:
+            add_section_header(t['certifications_header'])
+            for cert in data['certifications']:
+                p = doc.add_paragraph()
+                p.paragraph_format.space_after = Pt(0)
+                p.paragraph_format.left_indent = Cm(0.5)
+                
+                run_bullet = p.add_run("• ")
+                run_name = p.add_run(cert['name'])
+                run_name.bold = True
+                run_details = p.add_run(f" ({cert['issuer']}, {cert['year']})")
+                
+                for r in [run_bullet, run_name, run_details]: 
+                    r.font.name = 'Times New Roman'
+                    r.font.size = Pt(scaled(10.5))
+
+        elif section == 'projects' and data.get('projects'):
+            add_section_header(t['projects_header'])
+            for proj in data['projects']:
+                 p = doc.add_paragraph()
+                 p.paragraph_format.space_after = Pt(0)
+                 p.paragraph_format.left_indent = Cm(0.5)
+                 
+                 run_bullet = p.add_run("• ")
+                 run_title = p.add_run(proj['title'])
+                 run_title.bold = True
+                 
+                 for r in [run_bullet, run_title]:
+                     r.font.name = 'Times New Roman'
+                     r.font.size = Pt(scaled(10.5))
+                 
+                 if proj.get('link'):
+                     run_link = p.add_run(f" | {proj['link']}")
+                     run_link.font.name = 'Times New Roman'
+                     run_link.font.size = Pt(scaled(10.5))
+
+                 if proj.get('description'):
+                     for line in proj['description'].split('\n'):
+                         if line.strip(): add_para(line)
+
+        elif section == 'languages' and data.get('languages'):
+            add_section_header(t['languages_header'])
+            for lang in data['languages']:
+                p = doc.add_paragraph()
+                p.paragraph_format.space_after = Pt(0)
+                run = p.add_run(f"• {lang['name']}")
+                run.bold = True
+                run2 = p.add_run(f" - {t['lbl_conv']}: {lang['conv']} | {t['lbl_comp']}: {lang['comp']} | {t['lbl_writ']}: {lang['writ']}")
+                for r in [run, run2]: 
+                    r.font.name = 'Times New Roman'
+                    r.font.size = Pt(scaled(10.5))
+
+        elif section == 'awards' and data.get('awards'):
+            add_section_header(t['awards_header'])
+            for aw in data['awards']:
+                add_para(f"• {aw['title']} | {aw['issuer']} | {aw['date']}")
+                
+        elif section == 'volunteering' and data.get('volunteering'):
+            add_section_header(t['volunteering_header'])
+            for vol in data['volunteering']:
+                p = doc.add_paragraph()
+                p.paragraph_format.space_after = Pt(0)
+                run = p.add_run(f"• {vol['role']}")
+                run.bold = True
+                run2 = p.add_run(f" | {vol['org']} | {vol['category']}")
+                for r in [run, run2]: r.font.name = 'Times New Roman'
 
     # Save to buffer
     buffer = io.BytesIO()
@@ -1114,6 +1172,45 @@ def main():
         st.session_state['resume_data']['updated_at'] = st.date_input(t['lbl_updated'], value=st.session_state['resume_data'].get('updated_at', date.today()))
         
         st.divider()
+        # --- REORDER SECTIONS (DRAG & DROP) ---
+        st.markdown("### Reorder Sections")
+        default_order = ["summary", "skills", "experience", "education", "certifications", "projects", "languages", "awards", "volunteering"]
+        if "section_order" not in st.session_state['resume_data']:
+            st.session_state['resume_data']['section_order'] = default_order
+
+        current_order_keys = st.session_state['resume_data'].get('section_order', default_order)
+        # Fix missing keys
+        for k in default_order: 
+            if k not in current_order_keys: current_order_keys.append(k)
+
+        key_map = {
+            'summary': t['summary_header'], 'skills': t['skills_header'], 'experience': t['experience_header'],
+            'education': t['education_header'], 'certifications': t['certifications_header'], 'projects': t.get('projects_header', 'PROJETOS'),
+            'languages': t['languages_header'], 'awards': t['awards_header'], 'volunteering': t['volunteering_header']
+        }
+        
+        # Prepare list for Sortables (Must be strings for single container)
+        # Create a list of readable titles based on current order
+        items_to_sort = []
+        for k in current_order_keys:
+            if k in key_map:
+                items_to_sort.append(key_map[k])
+        
+        sorted_titles = sort_items(items_to_sort)
+        
+        # Map back from Title -> Key
+        if sorted_titles:
+            # Create reverse map: Title -> Key
+            title_to_key = {v: k for k, v in key_map.items()}
+            new_order = []
+            for title in sorted_titles:
+                if title in title_to_key:
+                    new_order.append(title_to_key[title])
+            
+            st.session_state['resume_data']['section_order'] = new_order
+
+
+        st.divider()
         audit_ok, audit_details = run_system_audit()
         if audit_ok: st.success("System Status: ✅ Operational")
         else: st.error(f"System Error: {audit_details}")
@@ -1132,8 +1229,10 @@ def main():
             section_map = {
                 t['contact_header']: "Contact", t['summary_header']: "Summary", t['skills_header']: "Skills",
                 t['experience_header']: "Experience", t['education_header']: "Education", t['certifications_header']: "Certifications",
+                t.get('projects_header', 'PROJETOS'): "Projects",
                 t['languages_header']: "Languages", t['awards_header']: "Awards", t['volunteering_header']: "Volunteering"
             }
+            # Preserve selection
             section_selected = st.selectbox(t['go_to'], list(section_map.keys()))
             section_logic = section_map[section_selected]
 
@@ -1198,6 +1297,17 @@ def main():
                     issuer = st.text_input(t['lbl_issuer'])
                     year = st.text_input(t['lbl_year'])
                     if st.form_submit_button(t['btn_add']): add_certification(name, issuer, year); st.rerun()
+
+            elif section_logic == "Projects":
+                for i, proj in enumerate(st.session_state['resume_data'].get('projects', [])):
+                    with st.expander(f"{proj['title']}"):
+                        st.write(f"Link: {proj['link']}")
+                        if st.button(f"{t['btn_remove']} {i}", key=f"del_proj_{i}"): remove_project(i); st.rerun()
+                with st.form("add_proj_form"):
+                    title = st.text_input(t.get('lbl_project_title', 'Título'))
+                    link = st.text_input(t.get('lbl_project_link', 'Link'))
+                    desc = st.text_area(t.get('lbl_project_desc', 'Descrição'))
+                    if st.form_submit_button(t['btn_add']): add_project(title, link, desc); st.rerun()
 
             elif section_logic == "Languages":
                 for i, lang in enumerate(st.session_state['resume_data'].get('languages', [])):
@@ -1276,62 +1386,78 @@ def main():
                 </style>
             """, unsafe_allow_html=True)
 
-            # HTML Preview (Resume)
+            # HTML Preview (Resume) with Dynamic Order
             data = st.session_state['resume_data']
             stack_html = f'<div class="resume-stack">{data.get("stack", "")}</div>' if data.get("stack") else ""
             html_content = f"""<div class="resume-preview"><div class="resume-header"><h1 class="resume-name">{data['contact']['name']}</h1>{stack_html}<div class="resume-contact">📞 {data['contact']['phone']} | ✉️ {data['contact']['email']}<br>📍 {data['contact']['location']} | 🔗 {data['contact']['linkedin']}</div></div>"""
-            if data['summary']:
-                html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['summary_header']}</div><div class="resume-description">"""
-                for line in data['summary'].split('\n'):
-                    if line.strip(): html_content += f"<div class='resume-paragraph'>{line}</div>"
-                
-                # Feitos / Achievements Preview
-                if data.get('achievements'):
-                     ach_label = "FEITOS" if lang_code == 'pt' else "KEY ACHIEVEMENTS"
-                     html_content += f"<div class='resume-achievements'>{ach_label}</div>"
-                     for line in data.get('achievements').split('\n'):
-                         if line.strip(): html_content += f"<div class='resume-paragraph'>{line}</div>"
-
-                html_content += "</div></div>"
-            if data['skills']: html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['skills_header']}</div><div class="resume-description">{', '.join(data['skills'])}</div></div>"""
-            if data['experience']:
-                html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['experience_header']}</div>"""
-                for exp in data['experience']:
-                    html_content += f"""<div class="resume-item"><div class="resume-item-header">{exp['position']} - {exp['company']}</div><div class="resume-item-sub">{exp['start']} - {exp['end']}</div><div class="resume-description">"""
-                    for line in exp['description'].split('\n'):
-                        if line.strip(): html_content += f"<div class='resume-paragraph'>{line}</div>"
-                    html_content += "</div></div>"
-                html_content += "</div>"
-            if data['education']:
-                html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['education_header']}</div>"""
-                for edu in data['education']:
-                    html_content += f"""<div class="resume-item"><div class="resume-item-header">{edu['degree']}</div><div class="resume-item-sub">{edu['institution']} - {t['lbl_year']}: {edu['year']}</div></div>"""
-                html_content += "</div>"
-            if data['certifications']:
-                html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['certifications_header']}</div><ul>"""
-                for cert in data['certifications']: html_content += f"""<li><b>{cert['name']}</b> ({cert['issuer']}, {cert['year']})</li>"""
-                html_content += "</ul></div>"
             
-            # Languages HTML Preview
-            if data.get('languages'):
-                html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['languages_header']}</div><ul>"""
-                for lang in data['languages']:
-                    html_content += f"""<li><b>{lang['name']}</b> - {t['lbl_conv']}: {lang['conv']} | {t['lbl_comp']}: {lang['comp']} | {t['lbl_writ']}: {lang['writ']}</li>"""
-                html_content += "</ul></div>"
+            section_order = data.get('section_order', ["summary", "skills", "experience", "education", "certifications", "projects", "languages", "awards", "volunteering"])
+            
+            for section in section_order:
+                if section == 'summary' and data['summary']:
+                    html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['summary_header']}</div><div class="resume-description">"""
+                    for line in data['summary'].split('\n'):
+                        if line.strip(): html_content += f"<div class='resume-paragraph'>{line}</div>"
+                    
+                    if data.get('achievements'):
+                         ach_label = "FEITOS" if lang_code == 'pt' else "KEY ACHIEVEMENTS"
+                         html_content += f"<div class='resume-achievements'>{ach_label}</div>"
+                         for line in data.get('achievements').split('\n'):
+                             if line.strip(): html_content += f"<div class='resume-paragraph'>{line}</div>"
+                    html_content += "</div></div>"
 
-            # Awards HTML Preview
-            if data.get('awards'):
-                html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['awards_header']}</div><ul>"""
-                for aw in data['awards']:
-                    html_content += f"""<li>{aw['title']} | {t['connector_offered_by']} {aw['issuer']} | {aw['date']}</li>"""
-                html_content += "</ul></div>"
+                elif section == 'skills' and data['skills']:
+                     html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['skills_header']}</div><div class="resume-description">{', '.join(data['skills'])}</div></div>"""
+                
+                elif section == 'experience' and data['experience']:
+                    html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['experience_header']}</div>"""
+                    for exp in data['experience']:
+                        html_content += f"""<div class="resume-item"><div class="resume-item-header">{exp['position']} - {exp['company']}</div><div class="resume-item-sub">{exp['start']} - {exp['end']}</div><div class="resume-description">"""
+                        for line in exp['description'].split('\n'):
+                            if line.strip(): html_content += f"<div class='resume-paragraph'>{line}</div>"
+                        html_content += "</div></div>"
+                    html_content += "</div>"
 
-            # Volunteering HTML Preview
-            if data.get('volunteering'):
-                html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['volunteering_header']}</div><ul>"""
-                for vol in data['volunteering']:
-                    html_content += f"""<li><b>{vol['role']}</b> | {vol['org']} | {vol['start']} -> {vol['end']} | {vol['category']}</li>"""
-                html_content += "</ul></div>"
+                elif section == 'education' and data['education']:
+                    html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['education_header']}</div>"""
+                    for edu in data['education']:
+                        html_content += f"""<div class="resume-item"><div class="resume-item-header">{edu['degree']}</div><div class="resume-item-sub">{edu['institution']} - {t['lbl_year']}: {edu['year']}</div></div>"""
+                    html_content += "</div>"
+
+                elif section == 'certifications' and data['certifications']:
+                    html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['certifications_header']}</div><ul>"""
+                    for cert in data['certifications']: html_content += f"""<li><b>{cert['name']}</b> ({cert['issuer']}, {cert['year']})</li>"""
+                    html_content += "</ul></div>"
+                
+                elif section == 'projects' and data.get('projects'):
+                    html_content += f"""<div class="resume-section"><div class="resume-section-title">{t.get('projects_header', 'PROJETOS')}</div><ul>"""
+                    for proj in data['projects']:
+                        link_html = f" | <a href='{proj['link']}' target='_blank'>Link</a>" if proj.get('link') else ""
+                        html_content += f"""<li><b>{proj['title']}</b>{link_html}</li>"""
+                        if proj.get('description'):
+                            html_content += "<div class='resume-description'>"
+                            for line in proj['description'].split('\n'):
+                                if line.strip(): html_content += f"<div>{line}</div>"
+                            html_content += "</div>"
+                    html_content += "</ul></div>"
+
+                elif section == 'languages' and data.get('languages'):
+                    html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['languages_header']}</div><ul>"""
+                    for lang in data['languages']:
+                        html_content += f"""<li><b>{lang['name']}</b> - {t['lbl_conv']}: {lang['conv']} | {t['lbl_comp']}: {lang['comp']} | {t['lbl_writ']}: {lang['writ']}</li>"""
+                    html_content += "</ul></div>"
+
+                elif section == 'awards' and data.get('awards'):
+                    html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['awards_header']}</div><ul>"""
+                    for aw in data['awards']:
+                        html_content += f"""<li>{aw['title']} | {t['connector_offered_by']} {aw['issuer']} | {aw['date']}</li>"""
+                    html_content += "</ul></div>"
+
+                elif section == 'volunteering' and data.get('volunteering'):
+                    html_content += f"""<div class="resume-section"><div class="resume-section-title">{t['volunteering_header']}</div><ul>"""
+                    for vol in data['volunteering']:
+                        html_content += f"""<li><b>{vol['role']}</b> | {vol['org']} | {vol['start']} -> {vol['end']} | {vol['category']}</li>"""
+                    html_content += "</ul></div>"
 
             html_content += "</div>"
             st.markdown(html_content, unsafe_allow_html=True)
