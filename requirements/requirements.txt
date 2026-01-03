@@ -1,5 +1,6 @@
 # --- Framework Web ---
 streamlit
+streamlit-sortables
 
 # --- Geração de Documentos ---
 reportlab
