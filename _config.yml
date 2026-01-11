@@ -1,0 +1,25 @@
+title: "Gerador de Currículos ATS & Documentos Técnicos (ABNT/PMI)"
+author: "Éverson Filipe"
+description: >-
+  Micro-sistema robusto em Python/Streamlit para conformidade algorítmica. 
+  Otimizado para algoritmos de recrutamento (ATS), normas ABNT/PMI e LLMO. 
+  Garante integridade lógica e Zero Defeitos em documentos de alta performance.
+email: "eversonfilipe124@gmail.com"
+
+github_username: eversonfilipe
+social:
+  name: Éverson Filipe
+  links:
+    - https://www.linkedin.com/in/eversonfilipe-agile-products-ai/
+    - https://github.com/eversonfilipe
+
+plugins:
+  - jekyll-seo-tag
+  - jekyll-sitemap
+
+lang: pt-BR
+timezone: America/Sao_Paulo
+
+keywords-pt: "Gestão de Documentação, Gerador de Documentação, Gerador de currículos otimizados por ATS, Python, Streamlit, Reportlab, STAR"
+keywords-en: "Documentation Management, Documentation Generator, ATS-Optimized Resume Generator, Python, Streamlit, ReportLab, STAR"
+repository: eversonfilipe/gerador-curriculos-ats
